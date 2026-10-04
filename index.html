@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MLA Format Checker</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
+  h1 { margin-bottom: 4px; }
+  #drop { border: 2px dashed #999; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; margin: 20px 0; }
+  #drop.over { background: #eef5ff; border-color: #2a6df4; }
+  #status { color: #666; font-size: 14px; }
+  .item { padding: 8px 12px; margin: 6px 0; border-radius: 6px; }
+  .err { background: #fdecec; border-left: 4px solid #d33; }
+  .warn { background: #fff7e0; border-left: 4px solid #e0a800; }
+  .ok { background: #e8f7ec; border-left: 4px solid #2a9d4b; }
+</style>
+</head>
+<body>
+<h1>MLA Format Checker</h1>
+<p>Upload your essay as a <b>.docx</b> and see what's off. Your file stays in your browser and is never uploaded.</p>
+<div id="drop">Drop a .docx here or click to choose<input id="file" type="file" accept=".docx" hidden></div>
+<p id="status">Loading Python (first load takes a few seconds)...</p>
+<div id="results"></div>
+
+<script>
+const status = document.getElementById("status");
+const results = document.getElementById("results");
+const drop = document.getElementById("drop");
+const fileInput = document.getElementById("file");
+let pyodide = null;
+
+async function init() {
+  try {
+    pyodide = await loadPyodide();
+    await pyodide.loadPackage(["micropip", "lxml"]);
+    await pyodide.runPythonAsync("import micropip; await micropip.install('python-docx')");
+    const code = await (await fetch("mla_checker.py")).text();
+    pyodide.runPython(code);
+    status.textContent = "Ready.";
+  } catch (e) {
+    status.textContent = "Failed to load: " + e;
+  }
+}
+
+async function checkFile(file) {
+  if (!pyodide) { status.textContent = "Still loading, try again in a sec."; return; }
+  if (!file.name.endsWith(".docx")) { status.textContent = "Please upload a .docx file."; return; }
+  status.textContent = "Checking " + file.name + "...";
+  results.innerHTML = "";
+  try {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    pyodide.FS.writeFile("/tmp/essay.docx", buf);
+    const issues = pyodide.runPython("check_mla('/tmp/essay.docx')").toJs();
+    render(issues);
+    status.textContent = "Done.";
+  } catch (e) {
+    status.textContent = "Couldn't read that file: " + e;
+  }
+}
+
+function render(issues) {
+  if (!issues.length) {
+    results.innerHTML = '<div class="item ok">No MLA problems found. Nice.</div>';
+    return;
+  }
+  const seen = new Set();
+  for (const [level, msg] of issues) {
+    if (seen.has(msg)) continue;   // dedupe repeated messages
+    seen.add(msg);
+    const d = document.createElement("div");
+    d.className = "item " + (level === "ERROR" ? "err" : "warn");
+    d.textContent = (level === "ERROR" ? "✗ " : "! ") + msg;
+    results.appendChild(d);
+  }
+}
+
+drop.onclick = () => fileInput.click();
+fileInput.onchange = () => fileInput.files[0] && checkFile(fileInput.files[0]);
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); checkFile(e.dataTransfer.files[0]); };
+
+init();
+</script>
+</body>
+</html>
