@@ -1,86 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MLA Format Checker</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#09090b">
+<title>JK - MLA Format Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
-  h1 { margin-bottom: 4px; }
-  #drop { border: 2px dashed #999; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; margin: 20px 0; }
-  #drop.over { background: #eef5ff; border-color: #2a6df4; }
-  #status { color: #666; font-size: 14px; }
-  .item { padding: 8px 12px; margin: 6px 0; border-radius: 6px; }
-  .err { background: #fdecec; border-left: 4px solid #d33; }
-  .warn { background: #fff7e0; border-left: 4px solid #e0a800; }
-  .ok { background: #e8f7ec; border-left: 4px solid #2a9d4b; }
+:root{--bg:#09090b;--panel:#111114;--text:#f4f4f5;--muted:#a1a1aa;--line:#27272a;--accent:#b8f36b;--danger:#f28d8d;--warn:#f5c46b;--max:1080px}
+@property --deg{syntax:"<angle>";inherits:false;initial-value:0deg}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;line-height:1.65;overflow-x:hidden}
+.glow{position:fixed;width:420px;height:420px;border-radius:50%;background:#9be34a;filter:blur(150px);opacity:.10;right:2%;top:8%;pointer-events:none;z-index:-1}
+.wrap{width:min(var(--max),calc(100% - 40px));margin:auto}
+header{position:sticky;top:0;z-index:10;background:rgba(9,9,11,.82);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.07)}
+nav{height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:-.04em}
+.brand span{color:var(--accent)}
+.privacy-pill{display:flex;align-items:center;gap:8px;padding:7px 13px;border-radius:99px;color:#d4d4d8;border:1px solid var(--line);font-size:12px}
+.privacy-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(184,243,107,.55)}
+.hero{padding:70px 0 36px}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1,h2{font-family:"Space Grotesk",sans-serif;letter-spacing:-.055em;line-height:1.08}
+h1{font-size:clamp(40px,7vw,72px);max-width:850px;margin:20px 0}
+h1 span{color:#9b9ba4}
+.hero p{max-width:600px;margin:0;color:var(--muted);font-size:17px}
+.main-card{padding:24px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#151518,#0e0e10)}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tab{padding:9px 16px;border:1px solid var(--line);border-radius:99px;background:transparent;color:var(--muted);font:600 13px "DM Sans",sans-serif;cursor:pointer}
+.tab.on{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+textarea{width:100%;min-height:200px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;outline:none;background:var(--bg);color:var(--text);font:15px/1.6 "DM Sans",sans-serif;resize:vertical;transition:border-color .2s,box-shadow .2s}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(184,243,107,.07)}
+textarea::placeholder{color:#62626a}
+#drop{border:1px dashed #3b3b40;border-radius:12px;padding:46px 20px;text-align:center;color:var(--muted);cursor:pointer;background:var(--bg);transition:.2s}
+#drop.over,#drop:hover{border-color:var(--accent);color:var(--accent)}
+.row{display:flex;align-items:center;gap:14px;margin-top:14px}
+.btn{height:46px;padding:0 24px;border:0;border-radius:10px;background:var(--accent);color:#0b0f05;font:700 14px "DM Sans",sans-serif;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:wait}
+#status{color:var(--muted);font-size:13px}
+.hidden{display:none}
+#results{margin-top:8px}
+.strength-area{display:grid;grid-template-columns:155px 1fr;gap:30px;align-items:center;padding:34px 10px 30px}
+.orb{width:140px;height:140px;margin:auto;display:grid;place-items:center;position:relative;border-radius:50%;background:radial-gradient(circle at center,rgba(184,243,107,.08) 0 53%,transparent 54%),conic-gradient(var(--accent) var(--deg),rgba(255,255,255,.06) var(--deg));transition:--deg .3s ease}
+.orb::before{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--bg);border:1px solid var(--line)}
+.orb-content{position:relative;z-index:1;text-align:center}
+.orb-score{font-family:"Space Grotesk",sans-serif;font-size:32px;font-weight:700;letter-spacing:-.04em}
+.orb-label{color:var(--muted);font-size:11px}
+.strength-info h2{margin:0 0 7px;font-size:28px}
+.strength-info p{margin:0;color:var(--muted);font-size:14px;max-width:600px}
+.progress{height:6px;margin-top:19px;overflow:hidden;border-radius:99px;background:#202024}
+.progress-fill{height:100%;width:0;border-radius:inherit;background:var(--accent);transition:width .3s ease}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.metric{padding:18px;border-radius:15px;background:var(--panel);border:1px solid var(--line)}
+.metric-top{color:var(--muted);font-size:12px}
+.metric-value{margin-top:8px;font-family:"Space Grotesk",sans-serif;font-size:22px;font-weight:700;letter-spacing:-.04em}
+.card{margin-top:14px;padding:23px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}
+.card-title{margin-bottom:13px;font-family:"Space Grotesk",sans-serif;font-size:17px;font-weight:600;letter-spacing:-.03em}
+.note{color:var(--muted);font-size:13px}
+.issue{display:flex;gap:8px;margin:5px 0;font-size:13px;color:var(--muted)}
+.issue-dot{flex:0 0 auto;width:6px;height:6px;margin-top:8px;border-radius:50%;background:var(--danger)}
+.issue.warn .issue-dot{background:var(--warn)}
+.para{padding:10px 14px;margin:6px 0;border-left:3px solid transparent;border-radius:6px;font:15px/1.7 "DM Sans",sans-serif;color:#d4d4d8;white-space:pre-wrap}
+.para.err{border-color:var(--danger);background:rgba(242,141,141,.06)}
+.para.warn{border-color:var(--warn);background:rgba(245,196,107,.06)}
+.para .issue{margin:4px 0 0;font-size:12px;white-space:normal}
+mark{background:rgba(242,141,141,.28);color:var(--text);border-radius:4px;padding:0 3px}
+mark.warn{background:rgba(245,196,107,.28)}
+.ok{color:var(--accent);font-size:14px}
+footer{padding:25px 0 40px;color:#777780;font-size:12px;display:flex;justify-content:space-between;gap:15px}
+@media(max-width:720px){.hero{padding:50px 0 28px}.main-card{padding:16px}.strength-area{grid-template-columns:1fr;text-align:center}.strength-info p{margin:auto}.metrics{grid-template-columns:repeat(2,1fr)}.privacy-pill{font-size:11px;max-width:210px;line-height:1.3}footer{flex-direction:column}}
 </style>
 </head>
 <body>
-<h1>MLA Format Checker</h1>
-<p>Upload your essay as a <b>.docx</b> and see what's off. Your file stays in your browser and is never uploaded.</p>
-<div id="drop">Drop a .docx here or click to choose<input id="file" type="file" accept=".docx" hidden></div>
-<p id="status">Loading Python (first load takes a few seconds)...</p>
-<div id="results"></div>
+<div class="glow"></div>
+<header><div class="wrap"><nav>
+  <div class="brand">JK<span>.</span></div>
+  <div class="privacy-pill"><span class="privacy-dot"></span>100% client-side · essays never leave your browser</div>
+</nav></div></header>
+
+<div class="wrap">
+<section class="hero">
+  <div class="eyebrow">Essay Intelligence</div>
+  <h1>See exactly what's<br><span>wrong with your MLA.</span></h1>
+  <p>Paste your essay or upload a .docx. Every problem gets highlighted right in your text, from the heading and citations to the Works Cited page.</p>
+</section>
+
+<main class="main-card">
+  <div class="tabs">
+    <button class="tab on" data-tab="paste">Paste text</button>
+    <button class="tab" data-tab="upload">Upload .docx</button>
+  </div>
+
+  <div id="pastePane">
+    <textarea id="essay" spellcheck="false" placeholder="Paste your full essay here, starting with your name, instructor, course, and date, and ending with Works Cited..."></textarea>
+    <div class="row"><button class="btn" id="checkBtn" disabled>Check my essay</button><span id="status">Loading Python (first load takes a few seconds)...</span></div>
+  </div>
+
+  <div id="uploadPane" class="hidden">
+    <div id="drop">Drop a .docx here or click to choose<input id="file" type="file" accept=".docx" hidden></div>
+    <p class="note">Uploading checks everything, including fonts, spacing, margins, and the header. Pasting can only check the text itself.</p>
+  </div>
+
+  <div id="results"></div>
+</main>
+
+<footer><span>© <span id="year"></span> Josh Koppanalil</span><span>JK · MLA checking performed locally</span></footer>
+</div>
 
 <script>
-const status = document.getElementById("status");
-const results = document.getElementById("results");
-const drop = document.getElementById("drop");
-const fileInput = document.getElementById("file");
-let pyodide = null;
+const $ = id => document.getElementById(id);
+const status = $("status"), btn = $("checkBtn"), results = $("results");
+let py = null;
+$("year").textContent = new Date().getFullYear();
 
 async function init() {
   try {
-    pyodide = await loadPyodide();
-    await pyodide.loadPackage(["micropip", "lxml"]);
-    await pyodide.runPythonAsync("import micropip; await micropip.install('python-docx')");
-    const code = await (await fetch("mla_checker.py")).text();
-    pyodide.runPython(code);
+    py = await loadPyodide();
+    await py.loadPackage(["micropip", "lxml"]);
+    await py.runPythonAsync("import micropip; await micropip.install('python-docx')");
+    py.runPython(await (await fetch("mla_checker.py")).text());
     status.textContent = "Ready.";
-  } catch (e) {
-    status.textContent = "Failed to load: " + e;
-  }
+    btn.disabled = false;
+  } catch (e) { status.textContent = "Failed to load: " + e; }
 }
 
-async function checkFile(file) {
-  if (!pyodide) { status.textContent = "Still loading, try again in a sec."; return; }
-  if (!file.name.endsWith(".docx")) { status.textContent = "Please upload a .docx file."; return; }
-  status.textContent = "Checking " + file.name + "...";
-  results.innerHTML = "";
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
+  $("pastePane").classList.toggle("hidden", t.dataset.tab !== "paste");
+  $("uploadPane").classList.toggle("hidden", t.dataset.tab !== "upload");
+});
+
+btn.onclick = () => {
+  const text = $("essay").value;
+  if (!text.trim()) { status.textContent = "Paste your essay first."; return; }
+  try { py.globals.set("pasted", text); render(JSON.parse(py.runPython("run_text(pasted)"))); status.textContent = "Done."; }
+  catch (e) { status.textContent = "Something broke: " + e; }
+};
+
+async function checkFile(f) {
+  if (!py) { alert("Still loading, try again in a sec."); return; }
+  if (!f || !f.name.endsWith(".docx")) { alert("Please upload a .docx file."); return; }
   try {
-    const buf = new Uint8Array(await file.arrayBuffer());
-    pyodide.FS.writeFile("/tmp/essay.docx", buf);
-    const issues = pyodide.runPython("check_mla('/tmp/essay.docx')").toJs();
-    render(issues);
-    status.textContent = "Done.";
-  } catch (e) {
-    status.textContent = "Couldn't read that file: " + e;
-  }
+    py.FS.writeFile("/tmp/essay.docx", new Uint8Array(await f.arrayBuffer()));
+    render(JSON.parse(py.runPython("run_docx('/tmp/essay.docx')")));
+  } catch (e) { results.innerHTML = ""; alert("Couldn't read that file: " + e); }
 }
-
-function render(issues) {
-  if (!issues.length) {
-    results.innerHTML = '<div class="item ok">No MLA problems found. Nice.</div>';
-    return;
-  }
-  const seen = new Set();
-  for (const [level, msg] of issues) {
-    if (seen.has(msg)) continue;   // dedupe repeated messages
-    seen.add(msg);
-    const d = document.createElement("div");
-    d.className = "item " + (level === "ERROR" ? "err" : "warn");
-    d.textContent = (level === "ERROR" ? "✗ " : "! ") + msg;
-    results.appendChild(d);
-  }
-}
-
-drop.onclick = () => fileInput.click();
-fileInput.onchange = () => fileInput.files[0] && checkFile(fileInput.files[0]);
+const drop = $("drop");
+drop.onclick = () => $("file").click();
+$("file").onchange = e => checkFile(e.target.files[0]);
 drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
 drop.ondragleave = () => drop.classList.remove("over");
 drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); checkFile(e.dataTransfer.files[0]); };
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+function issueRow(i) {
+  const r = el("div", "issue" + (i.level === "WARN" ? " warn" : ""));
+  r.append(el("div", "issue-dot"), el("div", "", i.msg));
+  return r;
+}
+
+function paraNode(text, list) {
+  const worst = list.some(i => i.level === "ERROR") ? "err" : list.length ? "warn" : "";
+  const p = el("div", "para " + worst);
+  let frags = list.filter(i => i.frag).map(i => ({ f: i.frag, w: i.level === "WARN" }));
+  // wrap each flagged fragment (first occurrence) in <mark>
+  let pos = 0, marks = [];
+  frags.forEach(({ f, w }) => { const k = text.indexOf(f); if (k >= 0) marks.push({ k, f, w }); });
+  marks.sort((a, b) => a.k - b.k);
+  marks.forEach(m => {
+    if (m.k < pos) return;
+    p.append(document.createTextNode(text.slice(pos, m.k)));
+    p.append(el("mark", m.w ? "warn" : "", m.f));
+    pos = m.k + m.f.length;
+  });
+  p.append(document.createTextNode(text.slice(pos)));
+  const seen = new Set();
+  list.forEach(i => { if (!seen.has(i.msg)) { seen.add(i.msg); p.append(issueRow(i)); } });
+  return p;
+}
+
+function render(data) {
+  results.innerHTML = "";
+  const seen = new Set();
+  const issues = data.issues.filter(i => { const k = i.para + "|" + i.msg + "|" + i.frag; if (seen.has(k)) return false; seen.add(k); return true; });
+  const errs = issues.filter(i => i.level === "ERROR").length, warns = issues.length - errs;
+  const score = Math.max(0, 100 - errs * 8 - warns * 3);
+  const [label, desc] = score >= 90 ? ["Looking good", "Only tiny things left, if anything."]
+    : score >= 70 ? ["Almost there", "A handful of fixes and this is solid MLA."]
+    : score >= 40 ? ["Needs work", "Several formatting problems. Fix the highlighted spots first."]
+    : ["Needs a lot of work", "Lots of MLA rules are being missed. Start from the top of the list."];
+
+  results.insertAdjacentHTML("beforeend", `
+    <section class="strength-area">
+      <div class="orb" style="--deg:${score * 3.6}deg"><div class="orb-content"><div class="orb-score">${score}%</div><div class="orb-label">MLA score</div></div></div>
+      <div class="strength-info"><h2>${label}</h2><p>${desc}</p><div class="progress"><div class="progress-fill" style="width:${score}%"></div></div></div>
+    </section>
+    <section class="metrics">
+      <div class="metric"><div class="metric-top">Problems</div><div class="metric-value">${errs}</div></div>
+      <div class="metric"><div class="metric-top">Warnings</div><div class="metric-value">${warns}</div></div>
+      <div class="metric"><div class="metric-top">Paragraphs</div><div class="metric-value">${data.paras.filter(t => t.trim()).length}</div></div>
+      <div class="metric"><div class="metric-top">Check type</div><div class="metric-value">${data.formatting ? "Full" : "Text only"}</div></div>
+    </section>`);
+
+  if (!data.formatting) {
+    const c = el("div", "card"); c.append(el("div", "card-title", "Text-only check"),
+      el("div", "note", "Pasted text loses fonts, spacing, margins, indents, and the header. Upload the .docx to check those too."));
+    results.append(c);
+  }
+  const globals = issues.filter(i => i.para === null);
+  if (globals.length) {
+    const c = el("div", "card"); c.append(el("div", "card-title", "Document-wide"));
+    globals.forEach(i => c.append(issueRow(i)));
+    results.append(c);
+  }
+  const c = el("div", "card"); c.append(el("div", "card-title", "Your essay"));
+  if (!issues.length) c.append(el("div", "ok", "✓ No MLA problems found. Nice."));
+  data.paras.forEach((t, idx) => { if (t.trim()) c.append(paraNode(t, issues.filter(i => i.para === idx))); });
+  results.append(c);
+  results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 init();
 </script>
