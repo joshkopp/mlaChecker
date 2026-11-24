@@ -1,256 +1,420 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#0b1a2e">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1e3a2f">
 <title>MLA Format Checker · Josh Koppanalil</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<meta name="description" content="Paste an essay or upload a .docx and see every MLA 9 problem marked in your own text: heading, title, citations, quotes, fonts, spacing and Works Cited. Runs entirely in your browser.">
+<link rel="canonical" href="https://joshkopp.github.io/mlaChecker/">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="fonts/tinos.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-:root{--bg:#0b1a2e;--panel:#0f2239;--text:#f4f8fc;--muted:#8aa3bd;--line:#1d3a5a;--accent:#4fd1ff;--danger:#f28d8d;--warn:#f5c46b;--max:1080px}
-@property --deg{syntax:"<angle>";inherits:false;initial-value:0deg}
+@font-face{font-family:"Tinos";src:url(fonts/tinos.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Tinos";src:url(fonts/tinos-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Tinos";src:url(fonts/tinos-bold.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Instrument Sans";src:url(fonts/instrument-sans.woff2) format("woff2");font-weight:400 700;font-display:swap}
+:root{
+  --cloth:#1e3a2f;--cloth2:#27473a;--cloth3:#33574a;--on:#e6ede8;--on2:#a9bdb1;
+  --page:#fdfdfc;--ink:#1c1e1d;--gray:#666b68;--rule:#d9dcda;
+  --blue:#2452c2;--blue-bg:#e9effc;--ochre:#9a6a0c;--ochre-bg:#fbf1d9;--ok:#2d7a4b;
+  --serif:"Times New Roman","Tinos",Times,serif;
+  --sans:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;line-height:1.65;overflow-x:hidden}
-.glow{position:fixed;width:420px;height:420px;border-radius:50%;background:#2bb3e6;filter:blur(150px);opacity:.10;right:2%;top:8%;pointer-events:none;z-index:-1}
-.wrap{width:min(var(--max),calc(100% - 40px));margin:auto}
-header{position:sticky;top:0;z-index:10;background:rgba(9,9,11,.82);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.07)}
-nav{height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px}
-.brand{font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:-.04em}
-.brand span{color:var(--accent)}
-.privacy-pill{display:flex;align-items:center;gap:8px;padding:7px 13px;border-radius:99px;color:#d4d4d8;border:1px solid var(--line);font-size:12px}
-.privacy-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(79,209,255,.55)}
-.hero{padding:70px 0 36px}
-.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
-h1,h2{font-family:"Space Grotesk",sans-serif;letter-spacing:-.055em;line-height:1.08}
-h1{font-size:clamp(40px,7vw,72px);max-width:850px;margin:20px 0}
-h1 span{color:#9b9ba4}
-.hero p{max-width:600px;margin:0;color:var(--muted);font-size:17px}
-.main-card{padding:24px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#151518,#0e0e10)}
-.tabs{display:flex;gap:8px;margin-bottom:14px}
-.tab{padding:9px 16px;border:1px solid var(--line);border-radius:99px;background:transparent;color:var(--muted);font:600 13px "DM Sans",sans-serif;cursor:pointer}
-.tab.on{color:var(--bg);background:var(--accent);border-color:var(--accent)}
-textarea{width:100%;min-height:200px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;outline:none;background:var(--bg);color:var(--text);font:15px/1.6 "DM Sans",sans-serif;resize:vertical;transition:border-color .2s,box-shadow .2s}
-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(79,209,255,.07)}
-textarea::placeholder{color:#62626a}
-#drop{border:1px dashed #3b3b40;border-radius:12px;padding:46px 20px;text-align:center;color:var(--muted);cursor:pointer;background:var(--bg);transition:.2s}
-#drop.over,#drop:hover{border-color:var(--accent);color:var(--accent)}
-.row{display:flex;align-items:center;gap:14px;margin-top:14px}
-.btn{height:46px;padding:0 24px;border:0;border-radius:10px;background:var(--accent);color:#0b0f05;font:700 14px "DM Sans",sans-serif;cursor:pointer}
-.btn:disabled{opacity:.4;cursor:wait}
-#status{color:var(--muted);font-size:13px}
-.hidden{display:none}
-#results{margin-top:8px}
-.strength-area{display:grid;grid-template-columns:155px 1fr;gap:30px;align-items:center;padding:34px 10px 30px}
-.orb{width:140px;height:140px;margin:auto;display:grid;place-items:center;position:relative;border-radius:50%;background:radial-gradient(circle at center,rgba(79,209,255,.08) 0 53%,transparent 54%),conic-gradient(var(--accent) var(--deg),rgba(255,255,255,.06) var(--deg));transition:--deg .3s ease}
-.orb::before{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--bg);border:1px solid var(--line)}
-.orb-content{position:relative;z-index:1;text-align:center}
-.orb-score{font-family:"Space Grotesk",sans-serif;font-size:32px;font-weight:700;letter-spacing:-.04em}
-.orb-label{color:var(--muted);font-size:11px}
-.strength-info h2{margin:0 0 7px;font-size:28px}
-.strength-info p{margin:0;color:var(--muted);font-size:14px;max-width:600px}
-.progress{height:6px;margin-top:19px;overflow:hidden;border-radius:99px;background:#202024}
-.progress-fill{height:100%;width:0;border-radius:inherit;background:var(--accent);transition:width .3s ease}
-.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.metric{padding:18px;border-radius:15px;background:var(--panel);border:1px solid var(--line)}
-.metric-top{color:var(--muted);font-size:12px}
-.metric-value{margin-top:8px;font-family:"Space Grotesk",sans-serif;font-size:22px;font-weight:700;letter-spacing:-.04em}
-.card{margin-top:14px;padding:23px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}
-.card-title{margin-bottom:13px;font-family:"Space Grotesk",sans-serif;font-size:17px;font-weight:600;letter-spacing:-.03em}
-.note{color:var(--muted);font-size:13px}
-.issue{display:flex;gap:8px;margin:5px 0;font-size:13px;color:var(--muted)}
-.issue-dot{flex:0 0 auto;width:6px;height:6px;margin-top:8px;border-radius:50%;background:var(--danger)}
-.issue.warn .issue-dot{background:var(--warn)}
-.para{padding:10px 14px;margin:6px 0;border-left:3px solid transparent;border-radius:6px;font:15px/1.7 "DM Sans",sans-serif;color:#d4d4d8;white-space:pre-wrap}
-.para.err{border-color:var(--danger);background:rgba(242,141,141,.06)}
-.para.warn{border-color:var(--warn);background:rgba(245,196,107,.06)}
-.para .issue{margin:4px 0 0;font-size:12px;white-space:normal}
-mark{background:rgba(242,141,141,.28);color:var(--text);border-radius:4px;padding:0 3px}
-mark.warn{background:rgba(245,196,107,.28)}
-.ok{color:var(--accent);font-size:14px}
-.chk-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:34px}
-.chk{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;color:#d4d4d8}
-.chk-i{width:22px;height:22px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700}
-.chk.pass .chk-i{background:rgba(79,209,255,.15);color:var(--accent)}
-.chk.fail .chk-i{background:rgba(242,141,141,.15);color:var(--danger)}
-.chk.warn .chk-i{background:rgba(245,196,107,.15);color:var(--warn)}
-.chk.skip,.chk.na{color:#5a7591}
-.chk.skip .chk-i,.chk.na .chk-i{background:#1b1b1f;color:#5a7591}
-.chk-n{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
-@media(max-width:720px){.chk-grid{grid-template-columns:1fr}}
-footer{padding:25px 0 40px;color:#777780;font-size:12px;display:flex;justify-content:space-between;gap:15px}
-@media(max-width:720px){.hero{padding:50px 0 28px}.main-card{padding:16px}.strength-area{grid-template-columns:1fr;text-align:center}.strength-info p{margin:auto}.metrics{grid-template-columns:repeat(2,1fr)}.privacy-pill{font-size:11px;max-width:210px;line-height:1.3}footer{flex-direction:column}}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--cloth);color:var(--on);font:16px/1.55 var(--sans);overflow-x:hidden}
+a{color:inherit}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #9fc0ff;outline-offset:2px}
+.wrap{width:min(1120px,calc(100% - 32px));margin:0 auto}
+
+.bar{display:flex;align-items:center;gap:14px;height:60px}
+.brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:.06em}
+.brand svg{width:28px;height:26px}
+.brand b{color:#7da0ff}
+.crumb{color:var(--on2);font-size:14px;padding-left:14px;border-left:1px solid var(--cloth3)}
+.bar .side{margin-left:auto;font-size:13.5px;color:var(--on2)}
+
+.hero{padding:40px 0 34px;max-width:760px}
+h1{margin:0;font:400 clamp(38px,6vw,68px)/1.02 var(--serif);letter-spacing:-.015em;color:#fff}
+.hero p{margin:18px 0 0;color:var(--on2);font-size:17.5px;max-width:58ch}
+
+/* the page (8.5" wide: margins and ruler are drawn to scale) */
+.desk{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:34px;align-items:start}
+.sheet{container-type:inline-size;background:var(--page);color:var(--ink);box-shadow:0 1px 0 rgba(0,0,0,.25),0 18px 40px -22px rgba(0,0,0,.6);--in:calc(100cqw/8.5);--m:var(--in)}
+.ruler{position:relative;height:26px;border-bottom:1px solid var(--rule);background:
+  linear-gradient(to right,#e6e9e7 0 var(--m),transparent var(--m) calc(100% - var(--m)),#e6e9e7 calc(100% - var(--m)) 100%),
+  repeating-linear-gradient(to right,#9aa09c 0 1px,transparent 1px calc(100%/8.5)) bottom/100% 9px no-repeat,
+  repeating-linear-gradient(to right,#c3c7c5 0 1px,transparent 1px calc(100%/17)) bottom/100% 6px no-repeat,
+  repeating-linear-gradient(to right,#d6d9d7 0 1px,transparent 1px calc(100%/68)) bottom/100% 3px no-repeat}
+.ruler span{position:absolute;top:2px;transform:translateX(-50%);font-size:10px;color:var(--gray);font-variant-numeric:tabular-nums}
+.ruler .ind{position:absolute;bottom:0;width:0;height:0;border:5px solid transparent;border-bottom:7px solid var(--blue);border-top:0;transform:translateX(-50%)}
+.ruler .ind.l{left:var(--m)}
+.ruler .ind.f{left:calc(var(--m) + var(--in)/2);border-bottom:0;border-top:7px solid var(--blue);bottom:auto;top:12px}
+.inner{padding:22px var(--m) 30px}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--rule);margin-bottom:18px}
+.tab{border:0;background:none;padding:8px 12px 9px;font-size:14px;font-weight:600;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected=true]{color:var(--ink);border-color:var(--ink)}
+textarea{display:block;width:100%;min-height:380px;border:0;resize:vertical;background:none;outline:none;font:16px/2 var(--serif);color:var(--ink);padding:0}
+textarea::placeholder{color:#9ea39f}
+.paperfocus:focus-within{box-shadow:inset 3px 0 0 var(--blue)}
+.drop{display:grid;place-items:center;text-align:center;min-height:300px;border:1.5px dashed #b9bebb;padding:24px;cursor:pointer;color:var(--gray);font-size:15px}
+.drop b{display:block;color:var(--ink);font:400 26px/1.2 var(--serif);margin-bottom:6px}
+.drop.over,.drop:hover{border-color:var(--blue);background:var(--blue-bg)}
+.note{font-size:13.5px;color:var(--gray);margin:12px 0 0}
+.go{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--rule)}
+.btn{border:1.5px solid var(--ink);background:var(--page);color:var(--ink);padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;border-radius:3px}
+.btn:hover{background:#eef0ef}
+.btn.main{background:var(--ink);color:#fff}
+.btn.main:hover{background:#333634}
+.btn:disabled{opacity:.5;cursor:progress}
+#msg{font-size:13.5px;color:var(--gray);flex:1;min-width:180px}
+#msg.bad{color:#b3261e}
+.load{height:3px;background:var(--rule);margin-top:10px;overflow:hidden}
+.load i{display:block;height:100%;width:var(--p,0%);background:var(--blue);transition:width .4s}
+
+/* what it checks / report */
+.aside h2{margin:0 0 4px;font:400 26px/1.15 var(--serif);color:#fff}
+.aside .sub{margin:0 0 16px;color:var(--on2);font-size:14px}
+.checks{list-style:none;margin:0;padding:0;border-top:1px solid var(--cloth3)}
+.checks li{display:grid;grid-template-columns:20px 1fr auto;gap:9px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--cloth3);font-size:14px}
+.checks .g{font-weight:700;text-align:center}
+.checks .n{font-size:12px;color:var(--on2);white-space:nowrap}
+.checks li.docx .n{color:#7fa293}
+.checks li.pass .g{color:#7fd39c}
+.checks li.fail .g{color:#9fc0ff}
+.checks li.warn .g{color:#f0c46a}
+.checks li.skip,.checks li.na{color:#83a093}
+.checks button{all:unset;cursor:pointer;display:contents}
+.checks li.jump:hover{background:var(--cloth2)}
+.tot{display:flex;gap:22px;margin:4px 0 14px}
+.tot div{font-size:13.5px;color:var(--on2)}
+.tot b{display:block;font:400 48px/1 var(--serif);color:#fff}
+.verdict{font-size:15px;margin:0 0 16px;color:var(--on)}
+
+/* results */
+.results{margin-top:8px}
+.rhead{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.rhead h2{margin:0;font:400 30px/1.1 var(--serif);color:#fff}
+.marked{position:relative;padding-right:280px}
+.marked .pg{background:var(--page);color:var(--ink);padding:0 var(--m)}
+.marked .pg.last{padding-bottom:30px}
+.mk{container-type:inline-size;--in:calc((100cqw - 280px)/8.5);--m:var(--in)}
+.mk .ruler{grid-column:1}
+.para{font:16px/2 var(--serif);margin:0;position:relative;overflow-wrap:anywhere}
+.para.has-e::before,.para.has-w::before{content:"";position:absolute;left:-14px;top:6px;bottom:6px;width:2px;background:var(--blue)}
+.para.has-w::before{background:var(--ochre)}
+.para mark{background:none;color:inherit;text-decoration:underline wavy var(--blue);text-decoration-thickness:1.5px;text-underline-offset:4px;text-decoration-skip-ink:none}
+.para mark.w{text-decoration-color:var(--ochre);text-decoration-style:dotted;text-decoration-thickness:2px}
+.para sup,.slip b,.globals b{font:700 10.5px var(--sans);color:var(--blue);margin-left:1px}
+.para mark.w sup{color:var(--ochre)}
+.slips{position:absolute;right:0;width:262px;display:flex;flex-direction:column;gap:6px}
+.slip{background:var(--blue-bg);color:#1d2c52;font-size:13.5px;line-height:1.4;padding:7px 10px;border-left:3px solid var(--blue);transform:rotate(-.4deg)}
+.slip.w{background:var(--ochre-bg);color:#4a360b;border-color:var(--ochre);transform:rotate(.35deg)}
+.slip b{display:inline-block;min-width:16px;font-size:12px}
+.slip.w b{color:var(--ochre)}
+.flash{animation:flash 1.2s ease-out}
+@keyframes flash{0%,30%{box-shadow:0 0 0 3px #fff}100%{box-shadow:0 0 0 3px transparent}}
+.globals{background:var(--page);color:var(--ink);padding:16px var(--m) 4px;border-bottom:1px solid var(--rule)}
+.globals h3{margin:0 0 8px;font-size:14px;font-weight:700}
+.globals ul{margin:0 0 12px;padding:0;list-style:none;display:grid;gap:6px}
+.globals li{font-size:14px;padding:6px 10px;background:var(--blue-bg);border-left:3px solid var(--blue)}
+.globals li.w{background:var(--ochre-bg);border-color:var(--ochre)}
+.clean{font:400 22px/1.4 var(--serif);color:var(--ok);margin:0 0 16px}
+
+.howto{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px;margin:56px 0 0;padding-top:26px;border-top:1px solid var(--cloth3)}
+.howto h3{margin:0 0 6px;font:400 21px/1.2 var(--serif);color:#fff}
+.howto p{margin:0;color:var(--on2);font-size:14.5px}
+footer{display:flex;justify-content:space-between;gap:16px;padding:40px 0 30px;font-size:13px;color:var(--on2)}
+
+@media (max-width:960px){
+  .desk{grid-template-columns:1fr}
+  .marked{padding-right:0;min-height:0!important}
+  .mk{--in:calc(100cqw/8.5)}
+  .slips{position:static;width:auto;background:var(--page);padding:0 var(--m) 10px}
+  .slips:empty{display:none}
+  .howto{grid-template-columns:1fr;gap:20px}
+}
+@media (max-width:560px){
+  .bar .side,.crumb{display:none}
+  .sheet,.mk{--m:calc(var(--in)/2)}
+  .ruler span:nth-child(even){display:none}
+  .para.has-e::before,.para.has-w::before{left:-8px}
+  textarea{min-height:300px;font-size:15.5px}
+  .marked .pg,.para{font-size:15.5px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 </style>
-<link rel="icon" type="image/svg+xml" href="https://joshkoppanalil.com/favicon.svg">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://joshkoppanalil.com/assets/blueprint.css">
 </head>
 <body>
-<div class="glow"></div>
-<header><div class="wrap"><nav>
-  <a class="brand jk-logo" href="https://joshkoppanalil.com/" aria-label="Josh Koppanalil, home"><svg class="jk-mark" viewBox="0 0 64 64" aria-hidden="true"><rect x="1" y="1" width="62" height="62" rx="14" fill="#0b1a2e" stroke="#4fd1ff" stroke-opacity=".45"/><path d="M8 8h6M8 8v6M56 8h-6M56 8v6M8 56h6M8 56v-6M56 56h-6M56 56v-6" stroke="#4fd1ff" stroke-opacity=".5" stroke-width="1.5" fill="none"/><path d="M27 15v24a7.5 7.5 0 0 1-15 0" fill="none" stroke="#f4f8fc" stroke-width="5" stroke-linecap="round"/><path d="M27 33L46 15M33 27.3L46 49" fill="none" stroke="#4fd1ff" stroke-width="5" stroke-linecap="round"/><circle cx="33" cy="27.3" r="3.7" fill="#ff6b35"/></svg><span>Josh Koppanalil</span></a>
-  <div class="privacy-pill"><span class="privacy-dot"></span>100% client-side · essays never leave your browser</div>
-</nav></div></header>
-
 <div class="wrap">
+<header class="bar">
+  <a class="brand" href="https://joshkoppanalil.com/" aria-label="Josh Koppanalil, home"><svg viewBox="8 8 52 48" aria-hidden="true"><path fill="#3a6dff" d="M23 10h8.5v30.5c0 8-5 13.5-13 13.5H10v-8.5h8c3.3 0 5-1.7 5-5z"/><path fill="none" stroke="#e6ede8" stroke-width="3.4" stroke-linejoin="round" d="M28 10H36.5V34L48 10H57.5L43.92 36.31L58 54H48L36.5 39.52V54H28Z"/></svg><span>JOSH<b>/</b>K</span></a>
+  <span class="crumb">MLA checker</span>
+  <span class="side">Your essay never leaves this browser</span>
+</header>
+
 <section class="hero">
-  <div class="eyebrow">Essay Intelligence</div>
-  <h1>See exactly what's<br><span>wrong with your MLA.</span></h1>
-  <p>Paste your essay or upload a .docx. Every problem gets highlighted right in your text, from the heading and citations to the Works Cited page.</p>
+  <h1>Check your essay against MLA&nbsp;9.</h1>
+  <p>Paste it in or upload the Word file. Every problem is marked right in your text, from the heading and quotes to the Works Cited page, with a note on how to fix it.</p>
 </section>
 
-<main class="main-card">
-  <div class="tabs">
-    <button class="tab on" data-tab="paste">Paste text</button>
-    <button class="tab" data-tab="upload">Upload .docx</button>
+<div class="desk" id="desk">
+  <div class="sheet" id="input">
+    <div class="ruler" aria-hidden="true" id="ruler1"></div>
+    <div class="inner">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tPaste" aria-selected="true" aria-controls="pPaste">Paste text</button>
+        <button class="tab" role="tab" id="tFile" aria-selected="false" aria-controls="pFile">Upload .docx</button>
+      </div>
+      <div id="pPaste" role="tabpanel" aria-labelledby="tPaste" class="paperfocus">
+        <textarea id="essay" spellcheck="false" aria-label="Your essay" placeholder="Paste your whole essay, starting with your name, teacher, class and date, and ending with the Works Cited list."></textarea>
+      </div>
+      <div id="pFile" role="tabpanel" aria-labelledby="tFile" hidden>
+        <label class="drop" id="drop"><span><b>Drop your .docx here</b>or click to choose a file</span><input id="file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden></label>
+        <p class="note">A Word file gets the full check, including font, spacing, margins, indents and the page-number header. Google Docs: File, Download, Microsoft Word.</p>
+      </div>
+      <div class="go">
+        <button class="btn main" id="check">Check my essay</button>
+        <button class="btn" id="sample">Try a sample essay</button>
+        <span id="msg" role="status">Loading the checker…</span>
+      </div>
+      <div class="load" id="load"><i></i></div>
+    </div>
   </div>
 
-  <div id="pastePane">
-    <textarea id="essay" spellcheck="false" placeholder="Paste your full essay here, starting with your name, instructor, course, and date, and ending with Works Cited..."></textarea>
-    <div class="row"><button class="btn" id="checkBtn" disabled>Check my essay</button><span id="status">Loading Python (first load takes a few seconds)...</span></div>
-  </div>
+  <aside class="aside" id="aside">
+    <h2 id="asH">What it checks</h2>
+    <p class="sub" id="asSub">Seventeen MLA rules. Seven of them need the Word file, since pasted text loses its formatting.</p>
+    <div id="totals" hidden>
+      <div class="tot"><div><b id="nE">0</b>problems</div><div><b id="nW">0</b>to double-check</div></div>
+      <p class="verdict" id="verdict"></p>
+    </div>
+    <ul class="checks" id="checks"></ul>
+  </aside>
+</div>
 
-  <div id="uploadPane" class="hidden">
-    <div id="drop">Drop a .docx here or click to choose<input id="file" type="file" accept=".docx" hidden></div>
-    <p class="note">Uploading checks everything, including fonts, spacing, margins, and the header. Pasting can only check the text itself.</p>
-  </div>
+<section class="results" id="results" hidden>
+  <div class="rhead"><h2>Your essay, marked up</h2><div style="display:flex;gap:8px"><button class="btn" id="edit">Edit and recheck</button></div></div>
+  <div class="mk"><div class="marked" id="marked"></div></div>
+</section>
 
-  <div id="results"></div>
-</main>
+<section class="howto" aria-label="Reading the marks">
+  <div><h3>Blue means fix it</h3><p>A wavy blue line or note breaks an MLA rule. The number links the mark in your text to its note.</p></div>
+  <div><h3>Gold means look again</h3><p>A dotted gold line is probably wrong but depends on context, like a quote that might already be cited nearby.</p></div>
+  <div><h3>Click a rule to jump</h3><p>In the report, click any rule that failed to scroll to its first mark in your essay.</p></div>
+</section>
 
-<footer><span>© <span id="year"></span> Josh Koppanalil</span><span>MLA checking runs in your browser</span></footer>
+<footer><span>© Josh Koppanalil</span><span>Checking runs on Python in your browser</span></footer>
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-const status = $("status"), btn = $("checkBtn"), results = $("results");
-let py = null;
-$("year").textContent = new Date().getFullYear();
+'use strict';
+const $=id=>document.getElementById(id);
+const CHECKS=[
+  ['margins','1" margins on all sides',1],['font','Times New Roman, 12 pt',1],['header','Last name and page number header',1],
+  ['heading','Heading with date as Day Month Year',0],['title','Title centered, not bold or underlined',1],['spacing','Double spaced',1],
+  ['indent','0.5" paragraph indents',1],['cites','In-text citations like (Author 42)',0],['q_marks','Quotation marks balanced and consistent',0],
+  ['q_punct','Period after the citation, not inside the quote',0],['q_cite','Quotes followed by a citation',0],['q_block','Long quotes set as block quotes',0],
+  ['wc','Works Cited page and heading',0],['wc_page','Works Cited on its own page',1],['wc_indent','Works Cited hanging indent',1],
+  ['wc_alpha','Works Cited in alphabetical order',0],['wc_url','URLs without https://',0]];
+const SAMPLE=`Maya Ortiz
+Mr. Daniels
+English 10
+October 3, 2026
+The Quiet Cost of Always Being Online.
+Most teenagers now carry a device that never stops asking for attention. Researchers have started to measure what that does to focus, and the results are hard to ignore. One study found that students who kept their phones on the desk "scored noticeably lower on memory tests than students who left them in another room." (Ward, p. 140)
+The problem is not only distraction. Heavy users also report feeling "more isolated, not less, as their screen time grows" (Twenge, 2017). Schools have responded in different ways, from phone lockers to complete bans during class.
+Still, banning phones misses the larger point. Students need practice managing attention, not just rules that manage it for them. As one teacher put it, "the goal is a student who can put the phone away without being told" (Hernandez 12)
+Works cited
+Twenge, Jean M. iGen. Atria Books, 2017.
+Hernandez, Luis. "Teaching Attention." Education Weekly, 4 Mar. 2024, https://www.edweek.example/attention.
+Ward, Adrian F., et al. "Brain Drain." Journal of the Association for Consumer Research, vol. 2, no. 2, 2017, pp. 140-54.`;
 
-async function init() {
-  try {
-    py = await loadPyodide();
-    await py.loadPackage(["micropip", "lxml"]);
-    await py.runPythonAsync("import micropip; await micropip.install('python-docx')");
-    py.runPython(await (await fetch("mla_checker.py")).text());
-    status.textContent = "Ready.";
-    btn.disabled = false;
-  } catch (e) { status.textContent = "Failed to load: " + e; }
+/* ---------- ruler, drawn to scale (8.5 inches across) ---------- */
+function ruler(el){
+  let h='';for(let n=1;n<=8;n++)h+=`<span style="left:calc(${n}*100%/8.5)">${n}</span>`;
+  el.innerHTML=h+'<i class="ind l"></i><i class="ind f"></i>';
 }
+ruler($('ruler1'));
 
-document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
-  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
-  $("pastePane").classList.toggle("hidden", t.dataset.tab !== "paste");
-  $("uploadPane").classList.toggle("hidden", t.dataset.tab !== "upload");
-});
+/* ---------- checklist (before and after a check) ---------- */
+const GLYPH={pass:'✓',fail:'✗',warn:'!',skip:'–',na:'–'};
+function listChecks(result){
+  const ul=$('checks');ul.innerHTML='';
+  CHECKS.forEach(([key,label,docx],i)=>{
+    const li=document.createElement('li');let st='',note=docx?'Word file':'';
+    if(result){
+      const r=result[i]||{status:'na',count:0};st=r.status;
+      note=st==='fail'||st==='warn'?`${r.count} mark${r.count>1?'s':''}`:st==='skip'?'needs .docx':st==='na'?'nothing to check':'';
+    }
+    li.className=(st||'')+(docx&&!result?' docx':'');
+    const g=document.createElement('span');g.className='g';g.textContent=st?GLYPH[st]:'·';
+    const t=document.createElement('span');t.textContent=label;
+    const n=document.createElement('span');n.className='n';n.textContent=note;
+    if(st==='fail'||st==='warn'){
+      li.classList.add('jump');const b=document.createElement('button');b.title='Show in essay';b.append(g,t,n);b.onclick=()=>jumpTo(key);li.append(b);
+    }else li.append(g,t,n);
+    ul.append(li);
+  });
+}
+listChecks(null);
 
-btn.onclick = () => {
-  const text = $("essay").value;
-  if (!text.trim()) { status.textContent = "Paste your essay first."; return; }
-  try { py.globals.set("pasted", text); render(JSON.parse(py.runPython("run_text(pasted)"))); status.textContent = "Done."; }
-  catch (e) { status.textContent = "Something broke: " + e; }
+/* ---------- loading Python + python-docx ---------- */
+let py=null,ready=false,pending=null;
+const msg=(t,bad)=>{$('msg').textContent=t;$('msg').classList.toggle('bad',!!bad)};
+const prog=p=>$('load').style.setProperty('--p',p+'%');
+function boot(){
+  const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+  s.onload=init;s.onerror=()=>msg('Could not load the checker. Check your connection and reload the page.',true);
+  document.head.append(s);prog(8);
+}
+async function init(){
+  try{
+    msg('Loading Python…');py=await loadPyodide();prog(45);
+    msg('Loading the Word file reader…');await py.loadPackage(['micropip','lxml']);prog(70);
+    await py.runPythonAsync("import micropip\nawait micropip.install('python-docx')");prog(90);
+    const src=await fetch('mla_checker.py');if(!src.ok)throw new Error('mla_checker.py '+src.status);
+    py.runPython(await src.text());prog(100);
+    ready=true;$('load').hidden=true;msg('Ready.');
+    if(pending){const f=pending;pending=null;f()}
+  }catch(e){console.error(e);msg('The checker failed to load. Reload the page to try again.',true)}
+}
+boot();
+
+/* ---------- running a check ---------- */
+let lastText='',lastKind='text';
+function run(kind,payload,name){
+  if(!ready){pending=()=>run(kind,payload,name);msg('Still loading. Your essay will be checked as soon as it’s ready.');return}
+  let data;
+  try{
+    if(kind==='text'){py.globals.set('pasted',payload);data=JSON.parse(py.runPython('run_text(pasted)'))}
+    else{py.FS.writeFile('/tmp/essay.docx',payload);data=JSON.parse(py.runPython("run_docx('/tmp/essay.docx')"))}
+  }catch(e){
+    console.error(e);
+    msg(kind==='docx'?`Couldn’t read ${name||'that file'}. Make sure it’s a Word .docx file, not .doc or .pdf.`:'Something went wrong while checking. Try pasting the essay again.',true);
+    return;
+  }
+  if(!data.checklist.length){msg(data.issues[0]?data.issues[0].msg:'That’s too short to check.',true);return}
+  lastKind=kind;msg(kind==='docx'?`Checked ${name}.`:'Checked.');
+  show(data,kind,name);
+}
+$('check').onclick=()=>{
+  if($('tFile').getAttribute('aria-selected')==='true'){$('file').click();return}
+  const t=$('essay').value;if(!t.trim()){msg('Paste your essay first.',true);$('essay').focus();return}
+  lastText=t;run('text',t);
 };
+$('sample').onclick=()=>{selectTab('paste');$('essay').value=SAMPLE;lastText=SAMPLE;run('text',SAMPLE)};
 
-async function checkFile(f) {
-  if (!py) { alert("Still loading, try again in a sec."); return; }
-  if (!f || !f.name.endsWith(".docx")) { alert("Please upload a .docx file."); return; }
-  try {
-    py.FS.writeFile("/tmp/essay.docx", new Uint8Array(await f.arrayBuffer()));
-    render(JSON.parse(py.runPython("run_docx('/tmp/essay.docx')")));
-  } catch (e) { results.innerHTML = ""; alert("Couldn't read that file: " + e); }
+async function takeFile(f){
+  if(!f)return;
+  if(!/\.docx$/i.test(f.name)){msg(/\.doc$/i.test(f.name)?'That’s an old .doc file. Open it in Word and save as .docx.':'Choose a Word .docx file.',true);return}
+  msg(`Reading ${f.name}…`);
+  run('docx',new Uint8Array(await f.arrayBuffer()),f.name);
 }
-const drop = $("drop");
-drop.onclick = () => $("file").click();
-$("file").onchange = e => checkFile(e.target.files[0]);
-drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
-drop.ondragleave = () => drop.classList.remove("over");
-drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); checkFile(e.dataTransfer.files[0]); };
+$('file').onchange=e=>{takeFile(e.target.files[0]);e.target.value=''};
+const drop=$('drop');
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};
+drop.ondragleave=()=>drop.classList.remove('over');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');takeFile(e.dataTransfer.files[0])};
+// dropping a file anywhere on the page sheet also works
+$('input').addEventListener('dragover',e=>e.preventDefault());
+$('input').addEventListener('drop',e=>{if(e.dataTransfer.files.length){e.preventDefault();selectTab('file');takeFile(e.dataTransfer.files[0])}});
 
-function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
-function issueRow(i) {
-  const r = el("div", "issue" + (i.level === "WARN" ? " warn" : ""));
-  r.append(el("div", "issue-dot"), el("div", "", i.msg));
-  return r;
+function selectTab(which){
+  const file=which==='file';
+  $('tPaste').setAttribute('aria-selected',!file);$('tFile').setAttribute('aria-selected',file);
+  $('pPaste').hidden=file;$('pFile').hidden=!file;
+  $('check').textContent=file?'Choose a .docx':'Check my essay';
 }
+$('tPaste').onclick=()=>selectTab('paste');$('tFile').onclick=()=>selectTab('file');
 
-function paraNode(text, list) {
-  const worst = list.some(i => i.level === "ERROR") ? "err" : list.length ? "warn" : "";
-  const p = el("div", "para " + worst);
-  let frags = list.filter(i => i.frag).map(i => ({ f: i.frag, w: i.level === "WARN" }));
-  // wrap each flagged fragment (first occurrence) in <mark>
-  let pos = 0, marks = [];
-  frags.forEach(({ f, w }) => { const k = text.indexOf(f); if (k >= 0) marks.push({ k, f, w }); });
-  marks.sort((a, b) => a.k - b.k);
-  marks.forEach(m => {
-    if (m.k < pos) return;
-    p.append(document.createTextNode(text.slice(pos, m.k)));
-    p.append(el("mark", m.w ? "warn" : "", m.f));
-    pos = m.k + m.f.length;
-  });
-  p.append(document.createTextNode(text.slice(pos)));
-  const seen = new Set();
-  list.forEach(i => { if (!seen.has(i.msg)) { seen.add(i.msg); p.append(issueRow(i)); } });
-  return p;
-}
+/* ---------- showing the marked-up essay ---------- */
+const mk=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e};
+function show(data,kind,name){
+  const seen=new Set();
+  const issues=data.issues.filter(i=>{const k=i.para+'|'+i.msg+'|'+i.frag;if(seen.has(k))return false;seen.add(k);return true})
+    .sort((a,b)=>(a.para??-1)-(b.para??-1));
+  issues.forEach((x,n)=>x.n=n+1);
+  const errs=issues.filter(i=>i.level==='ERROR').length,warns=issues.length-errs;
 
-function render(data) {
-  results.innerHTML = "";
-  const seen = new Set();
-  const issues = data.issues.filter(i => { const k = i.para + "|" + i.msg + "|" + i.frag; if (seen.has(k)) return false; seen.add(k); return true; });
-  const errs = issues.filter(i => i.level === "ERROR").length, warns = issues.length - errs;
-  const score = Math.max(0, 100 - errs * 8 - warns * 3);
-  const [label, desc] = score >= 90 ? ["Looking good", "Only tiny things left, if anything."]
-    : score >= 70 ? ["Almost there", "A handful of fixes and this is solid MLA."]
-    : score >= 40 ? ["Needs work", "Several formatting problems. Fix the highlighted spots first."]
-    : ["Needs a lot of work", "Lots of MLA rules are being missed. Start from the top of the list."];
+  // report
+  $('asH').textContent='Report';
+  const live=data.checklist.filter(c=>c.status!=='skip'&&c.status!=='na'),good=live.filter(c=>c.status==='pass').length;
+  $('asSub').textContent=`${good} of ${live.length} rules passed`+(data.formatting?', full Word check.':'. Pasted text, so formatting rules were skipped.');
+  $('totals').hidden=false;$('nE').textContent=errs;$('nW').textContent=warns;
+  $('verdict').textContent=!issues.length?'No MLA problems found. Nice work.':!errs?'No rule breaks, just a few spots to double-check.':errs<=3?'Close. Fix the blue marks and it’s solid MLA.':'Start with the blue marks, top to bottom. Each one breaks an MLA rule.';
+  listChecks(data.checklist);
 
-  results.insertAdjacentHTML("beforeend", `
-    <section class="strength-area">
-      <div class="orb" style="--deg:${score * 3.6}deg"><div class="orb-content"><div class="orb-score">${score}%</div><div class="orb-label">MLA score</div></div></div>
-      <div class="strength-info"><h2>${label}</h2><p>${desc}</p><div class="progress"><div class="progress-fill" style="width:${score}%"></div></div></div>
-    </section>
-    <section class="metrics">
-      <div class="metric"><div class="metric-top">Problems</div><div class="metric-value">${errs}</div></div>
-      <div class="metric"><div class="metric-top">Warnings</div><div class="metric-value">${warns}</div></div>
-      <div class="metric"><div class="metric-top">Paragraphs</div><div class="metric-value">${data.paras.filter(t => t.trim()).length}</div></div>
-      <div class="metric"><div class="metric-top">Check type</div><div class="metric-value">${data.formatting ? "Full" : "Text only"}</div></div>
-    </section>`);
-
-  const ic = { pass: "✓", fail: "✗", warn: "!", skip: "–", na: "–" };
-  const live = data.checklist.filter(x => x.status !== "skip" && x.status !== "na");
-  const good = live.filter(x => x.status === "pass").length;
-  const ck = el("div", "card"); ck.append(el("div", "card-title", `Checklist · ${good} of ${live.length} passed`));
-  const grid = el("div", "chk-grid");
-  data.checklist.forEach(x => {
-    const r = el("div", "chk " + x.status);
-    const note = x.status === "fail" || x.status === "warn" ? `${x.count} issue${x.count > 1 ? "s" : ""}` : x.status === "skip" ? "needs .docx" : x.status === "na" ? "none found" : "";
-    r.append(el("span", "chk-i", ic[x.status]), el("span", "", x.label), el("span", "chk-n", note));
-    grid.append(r);
-  });
-  ck.append(grid); results.append(ck);
-
-  if (!data.formatting) {
-    const c = el("div", "card"); c.append(el("div", "card-title", "Text-only check"),
-      el("div", "note", "Pasted text loses fonts, spacing, margins, indents, and the header. Upload the .docx to check those too."));
-    results.append(c);
+  // essay
+  const M=$('marked');M.innerHTML='';
+  const ru=mk('div','ruler');ru.setAttribute('aria-hidden','true');ruler(ru);M.append(ru);
+  const globals=issues.filter(i=>i.para==null);
+  if(globals.length||!issues.length){
+    const g=mk('div','globals');
+    if(!issues.length)g.append(mk('p','clean','No MLA problems found.'));
+    if(globals.length){
+      g.append(mk('h3',null,'Whole document'));const ul=mk('ul');
+      globals.forEach(i=>{const li=mk('li',i.level==='WARN'?'w':'');li.id='iss'+i.n;li.dataset.key=i.key;const b=mk('b',null,i.n);li.append(b,' '+i.msg);ul.append(li)});
+      g.append(ul);
+    }
+    M.append(g);
   }
-  const globals = issues.filter(i => i.para === null);
-  if (globals.length) {
-    const c = el("div", "card"); c.append(el("div", "card-title", "Document-wide"));
-    globals.forEach(i => c.append(issueRow(i)));
-    results.append(c);
-  }
-  const c = el("div", "card"); c.append(el("div", "card-title", "Your essay"));
-  if (!issues.length) c.append(el("div", "ok", "✓ No MLA problems found. Nice."));
-  data.paras.forEach((t, idx) => { if (t.trim()) c.append(paraNode(t, issues.filter(i => i.para === idx))); });
-  results.append(c);
-  results.scrollIntoView({ behavior: "smooth", block: "start" });
+  const idx=data.paras.map((t,i)=>i).filter(i=>data.paras[i].trim());
+  idx.forEach((pi,k)=>{
+    const text=data.paras[pi],list=issues.filter(i=>i.para===pi);
+    const cell=mk('div','pg'+(k===idx.length-1?' last':''));
+    if(k===0)cell.style.paddingTop='22px';
+    const p=mk('p','para');
+    if(list.length)p.classList.add(list.some(i=>i.level==='ERROR')?'has-e':'has-w');
+    // underline flagged fragments (first occurrence, no overlaps); issues sharing a fragment share the mark
+    const byFrag=new Map();
+    list.filter(i=>i.frag).forEach(i=>{const k2=text.indexOf(i.frag);if(k2<0)return;const e=byFrag.get(k2+'|'+i.frag)||{k:k2,f:i.frag,ns:[],w:true};e.ns.push(i.n);if(i.level==='ERROR')e.w=false;byFrag.set(k2+'|'+i.frag,e)});
+    let pos=0;
+    [...byFrag.values()].sort((a,b)=>a.k-b.k).forEach(m=>{
+      if(m.k<pos)return;
+      p.append(text.slice(pos,m.k));
+      const mm=mk('mark',m.w?'w':'',m.f);mm.append(mk('sup',null,m.ns.join(',')));p.append(mm);pos=m.k+m.f.length;
+    });
+    p.append(text.slice(pos));
+    const loose=list.filter(i=>!i.frag||![...byFrag.values()].some(m=>m.ns.includes(i.n)));
+    if(loose.length)p.append(mk('sup',null,loose.map(i=>i.n).join(',')));
+    cell.append(p);
+    const slips=mk('div','slips');
+    list.forEach(i=>{const s=mk('div','slip'+(i.level==='WARN'?' w':''));s.id='iss'+i.n;s.dataset.key=i.key;s.append(mk('b',null,i.n),' '+i.msg);slips.append(s)});
+    M.append(cell,slips);
+  });
+  $('results').hidden=false;
+  layoutSlips();
+  $('results').scrollIntoView({behavior:'smooth',block:'start'});
 }
-
-init();
+/* margin notes sit beside their paragraph; push one down if the one above is still in the way */
+const wide=matchMedia('(min-width:961px)');
+function layoutSlips(){
+  const M=$('marked');if($('results').hidden)return;let y=0;
+  M.querySelectorAll('.slips').forEach(s=>{
+    if(!wide.matches||!s.children.length){s.style.top='';return}
+    const t=Math.max(s.previousElementSibling.offsetTop,y);s.style.top=t+'px';y=t+s.offsetHeight+8;
+  });
+  M.style.minHeight=wide.matches?y+'px':'';
+}
+addEventListener('resize',()=>{clearTimeout(layoutSlips.t);layoutSlips.t=setTimeout(layoutSlips,100)});
+document.fonts&&document.fonts.ready.then(layoutSlips);
+function jumpTo(key){
+  const el=document.querySelector(`[data-key="${key}"]`);if(!el)return;
+  el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
+}
+$('edit').onclick=()=>{
+  if(lastKind==='docx')selectTab('file');else selectTab('paste');
+  $('input').scrollIntoView({behavior:'smooth',block:'start'});
+  if(lastKind!=='docx')setTimeout(()=>$('essay').focus({preventScroll:true}),400);
+};
 </script>
 </body>
 </html>

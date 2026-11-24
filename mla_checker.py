@@ -41,6 +41,13 @@ def rf(p, r, attr):
         v = getattr(s.font, attr); s = s.base_style
     return v
 
+def align(p): return ps(p, "alignment")
+def clip(t, a, b):
+    """Slice t[a:b], starting at a word boundary so highlights don't begin mid-word."""
+    if a > 0 and t[a - 1] not in " \t":
+        k = t.find(" ", a, b)
+        if k != -1: a = k + 1
+    return t[a:b]
 def inch(x): return None if x is None else x / 914400
 def fancy(p): return any(r.bold or r.underline for r in p.runs) or bool(p.style.font.bold)
 def new_page(P, i):
@@ -59,9 +66,10 @@ def analyze(texts, doc=None):
 
     if doc:
         s = doc.sections[0]
-        for n, v in [("Top", s.top_margin), ("Bottom", s.bottom_margin), ("Left", s.left_margin), ("Right", s.right_margin)]:
-            if v is None or abs(inch(v) - 1) > TOL:
-                add("margins", "ERROR", f'{n} margin is {"unknown" if v is None else f"{inch(v):.2f}"}". MLA needs 1" on all sides.')
+        badm = [(n, v) for n, v in [("top", s.top_margin), ("bottom", s.bottom_margin), ("left", s.left_margin), ("right", s.right_margin)]
+                if v is None or abs(inch(v) - 1) > TOL]
+        if badm:
+            add("margins", "ERROR", "Margins: " + ", ".join(f'{n} {"unknown" if v is None else f"{inch(v):.2f}"}"' for n, v in badm) + '. MLA needs 1" on all sides.')
         fonts, sizes = set(), set()
         for p in P:
             for r in p.runs:
@@ -78,18 +86,18 @@ def analyze(texts, doc=None):
         else:
             if "PAGE" not in hx: add("header", "ERROR", "Header has no automatic page number (Insert > Page Number).")
             if not re.search(r"[A-Za-z]{2,}", ht): add("header", "ERROR", "Header is missing your last name before the page number.")
-            if s.header.paragraphs[0].alignment != AL.RIGHT: add("header", "WARN", "Header should be right-aligned.")
+            if align(s.header.paragraphs[0]) not in (AL.RIGHT,) and "<w:jc w:val=\"right\"" not in hx and "w:tab" not in hx: add("header", "WARN", "Header should be right-aligned.")
 
     h = ne[:4]
     if not re.match(DATE, texts[h[3]].strip()):
         add("heading", "ERROR", "4th line should be the date as Day Month Year (e.g. 3 October 2026).", h[3])
     if doc:
         for i in h:
-            if P[i].alignment in (AL.CENTER, AL.RIGHT):
+            if align(P[i]) in (AL.CENTER, AL.RIGHT):
                 add("heading", "ERROR", "Heading lines (name/instructor/course/date) should be left-aligned.", i)
     ti = ne[4]
     if doc:
-        if P[ti].alignment != AL.CENTER: add("title", "ERROR", "Title should be centered.", ti)
+        if align(P[ti]) != AL.CENTER: add("title", "ERROR", "Title should be centered.", ti)
         if fancy(P[ti]): add("title", "ERROR", "Title shouldn't be bold or underlined.", ti)
     if texts[ti].strip().endswith("."): add("title", "WARN", "Title shouldn't end with a period.", ti)
 
@@ -133,14 +141,14 @@ def analyze(texts, doc=None):
             after = t[m.end():]
             cm = re.match(r"\s*" + CITE, after)
             if cm:
-                frag = t[max(m.start(), m.end() - 25): m.end() + cm.end()]
+                frag = clip(t, max(m.start(), m.end() - 25), m.end() + cm.end())
                 if q.rstrip()[-1:] in ".,":
                     add("q_punct", "ERROR", "Period/comma goes after the citation, not inside the quote: \"…quote\" (Smith 42).", i, frag)
                 rest = after[cm.end():]
                 if rest[:1] not in (".", ",", ";", ":", "?", "!", ")") and (not rest.strip() or re.match(r"\s+[A-Z]", rest)):
                     add("q_punct", "WARN", "End the sentence with a period after the citation.", i, frag)
-            elif words >= 8 and not re.search(CITE, re.split(r"[.!?]\s+(?=[A-Z])", after, 1)[0]):
-                add("q_cite", "WARN", "This quote has no citation after it.", i, t[max(m.start(), m.end() - 25): m.end()])
+            elif words >= 8 and not re.search(CITE, re.split(r"[.!?]\s+(?=[A-Z])", after, maxsplit=1)[0]):
+                add("q_cite", "WARN", "This quote has no citation after it.", i, clip(t, max(m.start(), m.end() - 25), m.end()))
             if words > 50:
                 add("q_block", "WARN", f"{words}-word quote. Over about 4 lines, use a block quote (indent 0.5\", no quotation marks).", i, t[m.start(): m.start() + 40])
     if not cited: add("cites", "WARN", "No in-text citations found. MLA expects (Author page), e.g. (Smith 42).")
@@ -151,7 +159,7 @@ def analyze(texts, doc=None):
         seen["wc"] = True
         if texts[wc].strip() != "Works Cited": add("wc", "ERROR", 'Heading should read exactly "Works Cited".', wc)
         if doc:
-            if P[wc].alignment != AL.CENTER: add("wc", "ERROR", "Works Cited heading should be centered.", wc)
+            if align(P[wc]) != AL.CENTER: add("wc", "ERROR", "Works Cited heading should be centered.", wc)
             if fancy(P[wc]): add("wc", "ERROR", "Works Cited heading shouldn't be bold or underlined.", wc)
             if not new_page(P, wc): add("wc_page", "ERROR", "Works Cited should start on its own page.", wc)
         ents = [i for i in ne if i > wc]
